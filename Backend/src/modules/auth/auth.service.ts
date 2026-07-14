@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { PrismaClient } from '@/generated/prisma/client.ts';
 import { Estado } from '@/generated/prisma/enums.ts';
 import { env } from '@/common/config/env.ts';
@@ -27,7 +27,9 @@ export class AuthService {
     }
 
     const payload: AuthTokenPayload = { id: user.id, usuario: user.usuario, rol: user.rol };
-    const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+    const token = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+    });
 
     return {
       token,

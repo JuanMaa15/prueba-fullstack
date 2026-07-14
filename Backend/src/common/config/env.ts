@@ -17,12 +17,17 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET no esta definida en las variables de entorno');
 }
 
+const jwtExpiresInRaw = process.env.JWT_EXPIRES_IN ?? '3600';
+// Si es un número puro se interpreta como segundos; si no (ej. "7d", "1h"),
+// se deja como string para que jsonwebtoken lo interprete con su propio parser (librería `ms`).
+const JWT_EXPIRES_IN: number | string = /^\d+$/.test(jwtExpiresInRaw) ? Number(jwtExpiresInRaw) : jwtExpiresInRaw;
+
 export const env = {
   NODE_ENV,
   PORT: process.env.PORT ?? '3000',
   DATABASE_URL,
   JWT_SECRET,
-  JWT_EXPIRES_IN: Number(process.env.JWT_EXPIRES_IN ?? '3600'),
+  JWT_EXPIRES_IN,
   CORS_ORIGIN: (process.env.CORS_ORIGIN ?? '')
     .split(',')
     .map((origin) => origin.trim())
