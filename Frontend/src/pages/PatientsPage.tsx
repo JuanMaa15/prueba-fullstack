@@ -1,11 +1,25 @@
 import { useEffect, useState } from 'react'
-import type { Patient, PatientForm as PatientFormType, EstadoCita, Prioridad } from '@/types'
+import axios from 'axios'
+import type { ApiResponse, Patient, PatientForm as PatientFormType, EstadoCita, Prioridad } from '@/types'
 import { patientService } from '@/services/patientService'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { PatientForm } from '@/components/PatientForm'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Pagination } from '@/components/ui/Pagination'
+
+function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const body = error.response?.data as ApiResponse<unknown> | undefined
+    if (body?.errors?.length) {
+      return body.errors.map((e) => e.message).join(', ')
+    }
+    if (body?.message) {
+      return body.message
+    }
+  }
+  return 'Ocurrió un error inesperado'
+}
 
 export function PatientsPage() {
   const { user } = useAuth()
@@ -52,26 +66,39 @@ export function PatientsPage() {
   }, [search, estadoFilter, prioridadFilter, page, addToast, refreshKey])
 
   const handleCreate = async (data: PatientFormType) => {
-    await patientService.create(data)
-    addToast('Paciente creado correctamente', 'success')
-    setShowForm(false)
-    setRefreshKey((k) => k + 1)
+    try {
+      await patientService.create(data)
+      addToast('Paciente creado correctamente', 'success')
+      setShowForm(false)
+      setRefreshKey((k) => k + 1)
+    } catch (error) {
+      addToast(getErrorMessage(error), 'error')
+    }
   }
 
   const handleUpdate = async (data: PatientFormType) => {
     if (!editingPatient) return
-    await patientService.update(editingPatient.id, data)
-    addToast('Paciente actualizado correctamente', 'success')
-    setEditingPatient(null)
-    setRefreshKey((k) => k + 1)
+    try {
+      await patientService.update(editingPatient.id, data)
+      addToast('Paciente actualizado correctamente', 'success')
+      setEditingPatient(null)
+      setRefreshKey((k) => k + 1)
+    } catch (error) {
+      addToast(getErrorMessage(error), 'error')
+    }
   }
 
   const handleDelete = async () => {
     if (!deletingPatient) return
-    await patientService.remove(deletingPatient.id)
-    addToast('Paciente eliminado correctamente', 'success')
-    setDeletingPatient(null)
-    setRefreshKey((k) => k + 1)
+    try {
+      await patientService.remove(deletingPatient.id)
+      addToast('Paciente eliminado correctamente', 'success')
+      setRefreshKey((k) => k + 1)
+    } catch (error) {
+      addToast(getErrorMessage(error), 'error')
+    } finally {
+      setDeletingPatient(null)
+    }
   }
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -133,7 +160,7 @@ export function PatientsPage() {
             type="text"
             placeholder="Buscar por nombre o documento..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             onKeyDown={handleSearchKeyDown}
             className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

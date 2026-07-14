@@ -5,22 +5,24 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { Patient, PatientForm as PatientFormType, TipoDocumento, Eps, Ciudad, Genero } from '@/types'
 import { catalogService } from '@/services/catalogService'
 
+const todayIso = new Date().toISOString().split('T')[0]
+
 const PatientFormSchema = z.object({
   tipoDocumentoId: z.string().min(1, 'Tipo de documento requerido'),
   numeroDocumento: z.string().min(1, 'Número de documento requerido'),
   nombreCompleto: z.string().min(1, 'Nombre completo requerido'),
-  fechaNacimiento: z.string().min(1, 'Fecha de nacimiento requerida'),
+  fechaNacimiento: z
+    .string()
+    .min(1, 'Fecha de nacimiento requerida')
+    .refine((value) => value <= todayIso, 'La fecha de nacimiento no puede ser futura'),
   generoId: z.string().min(1, 'Género requerido'),
-  telefono: z.string().nullable(),
+  telefono: z.string().min(1, 'El teléfono es requerido'),
   email: z.string().nullable(),
   epsId: z.string().min(1, 'EPS requerida'),
   ciudadId: z.string().min(1, 'Ciudad requerida'),
   prioridad: z.enum(['ALTA', 'MEDIA', 'BAJA']),
   estadoCita: z.enum(['PENDIENTE', 'EN_ATENCION', 'ATENDIDO']).optional(),
-}).refine(
-  (data) => data.telefono || data.email,
-  { message: 'Al menos un teléfono o email es requerido', path: ['telefono'] },
-)
+})
 
 type PatientFormValues = z.infer<typeof PatientFormSchema>
 
@@ -84,7 +86,6 @@ export function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
     try {
       await onSubmit({
         ...data,
-        telefono: data.telefono || null,
         email: data.email || null,
       })
     } finally {
@@ -155,6 +156,7 @@ export function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
               </label>
               <input
                 type="date"
+                max={todayIso}
                 {...register('fechaNacimiento')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -190,6 +192,9 @@ export function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
                 {...register('telefono')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {errors.telefono && (
+                <p className="text-xs text-red-600 mt-1">{errors.telefono.message}</p>
+              )}
             </div>
 
             <div>
@@ -267,10 +272,6 @@ export function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
               </select>
             </div>
           </div>
-
-          {errors.telefono && (
-            <p className="text-xs text-red-600">{errors.telefono.message}</p>
-          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button

@@ -29,7 +29,7 @@ export interface Patient {
   numeroDocumento: string
   nombreCompleto: string
   fechaNacimiento: string
-  telefono: string | null
+  telefono: string
   email: string | null
   prioridad: Prioridad
   estadoCita: EstadoCita
@@ -47,7 +47,7 @@ export interface PatientForm {
   nombreCompleto: string
   fechaNacimiento: string
   generoId: string
-  telefono: string | null
+  telefono: string
   email: string | null
   epsId: string
   ciudadId: string
