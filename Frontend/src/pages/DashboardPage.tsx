@@ -47,7 +47,7 @@ export function DashboardPage() {
   if (!data) {
     return (
       <div className="p-12 text-center text-gray-500">
-        No se pudieron cargar los indicadores. El endpoint aún no está disponible.
+        No se pudieron cargar los indicadores.
       </div>
     )
   }
@@ -55,27 +55,25 @@ export function DashboardPage() {
   const maxEstado = Math.max(...Object.values(data.porEstado))
   const maxPrioridad = Math.max(...Object.values(data.porPrioridad))
 
+  const statCards = [
+    { label: 'Pacientes Registrados', value: data.totalPacientes, accent: 'text-gray-800' },
+    { label: 'Pendientes', value: data.porEstado.PENDIENTE ?? 0, accent: 'text-yellow-600' },
+    { label: 'En Atención', value: data.porEstado.EN_ATENCION ?? 0, accent: 'text-blue-600' },
+    { label: 'Atendidos', value: data.porEstado.ATENDIDO ?? 0, accent: 'text-green-600' },
+    { label: 'Prioridad Alta', value: data.porPrioridad.ALTA ?? 0, accent: 'text-red-600' },
+  ]
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Total Pacientes</p>
-          <p className="text-3xl font-bold text-gray-800 mt-1">{data.totalPacientes}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">En Atención</p>
-          <p className="text-3xl font-bold text-blue-600 mt-1">
-            {data.porEstado.EN_ATENCION || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Prioridad Alta</p>
-          <p className="text-3xl font-bold text-red-600 mt-1">
-            {data.porPrioridad.ALTA || 0}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        {statCards.map((card) => (
+          <div key={card.label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <p className="text-sm text-gray-500">{card.label}</p>
+            <p className={`text-3xl font-bold mt-1 ${card.accent}`}>{card.value}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
