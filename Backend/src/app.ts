@@ -6,6 +6,7 @@ import { errorHandler } from '@/common/middlewares/errorHandler.middleware.ts';
 import { notFound } from '@/common/middlewares/notFound.middleware.ts';
 import { generalRateLimit } from '@/common/middlewares/rateLimit.middleware.ts';
 import type { SuccessResponse } from '@/common/interfaces/apiResponse.interface.ts';
+import { apiRouter } from '@/modules/index.ts';
 
 export const app = express();
 
@@ -26,7 +27,8 @@ app.get('/health', (_req, res) => {
   res.status(200).json(body);
 });
 
-// Aquí se montan las rutas de los módulos, ej: app.use('/api/users', userRouter)
+// Rutas de los módulos
+app.use('/api/v1', apiRouter);
 
 // Rutas inexistentes y manejo global de errores (siempre al final)
 app.use(notFound);
