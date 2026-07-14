@@ -93,6 +93,7 @@ model Paciente {
   ciudadId          String     @map("ciudad_id") @db.Uuid
   prioridad         Prioridad
   estadoCita        EstadoCita @default(PENDIENTE) @map("estado_cita")
+  activo            Boolean    @default(true)
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
