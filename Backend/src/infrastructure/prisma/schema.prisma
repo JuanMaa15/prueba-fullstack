@@ -83,11 +83,11 @@ model Genero {
 model Paciente {
   id                String     @id @default(uuid()) @db.Uuid
   tipoDocumentoId   String     @map("tipo_documento_id") @db.Uuid
-  numeroDocumento   String     @map("numero_documento") @db.VarChar
+  numeroDocumento   String     @unique @map("numero_documento") @db.VarChar
   nombreCompleto    String     @map("nombre_completo") @db.VarChar
   fechaNacimiento   DateTime   @map("fecha_nacimiento") @db.Date
   generoId          String     @map("genero_id") @db.Uuid
-  telefono          String?    @db.VarChar
+  telefono          String     @db.VarChar
   email             String?    @db.VarChar
   epsId             String     @map("eps_id") @db.Uuid
   ciudadId          String     @map("ciudad_id") @db.Uuid

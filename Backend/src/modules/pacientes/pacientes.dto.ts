@@ -17,7 +17,7 @@ export interface PacienteResponseDto {
   numeroDocumento: string;
   nombreCompleto: string;
   fechaNacimiento: Date;
-  telefono: string | null;
+  telefono: string;
   email: string | null;
   prioridad: Prioridad;
   estadoCita: EstadoCita;

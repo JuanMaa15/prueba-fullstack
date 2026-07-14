@@ -1,5 +1,5 @@
-import type { PrismaClient } from '@/generated/prisma/client.ts';
-import { BadRequestError, NotFoundError } from '@/common/errors/appError.ts';
+import { Prisma, type PrismaClient } from '@/generated/prisma/client.ts';
+import { BadRequestError, ConflictError, NotFoundError } from '@/common/errors/appError.ts';
 import type { EstadoCita, Prioridad } from '@/generated/prisma/enums.ts';
 import type {
   CreateRequestDto,
@@ -21,7 +21,7 @@ interface PacienteWithRelations {
   numeroDocumento: string;
   nombreCompleto: string;
   fechaNacimiento: Date;
-  telefono: string | null;
+  telefono: string;
   email: string | null;
   prioridad: Prioridad;
   estadoCita: EstadoCita;
@@ -100,10 +100,9 @@ export class PacienteService {
   async create(data: CreateRequestDto): Promise<PacienteResponseDto> {
     await this.ensureCatalogsExist(data);
 
-    const paciente = await this.prisma.paciente.create({
-      data,
-      include: PACIENTE_INCLUDE,
-    });
+    const paciente = await this.withUniqueDocumentoCheck(() =>
+      this.prisma.paciente.create({ data, include: PACIENTE_INCLUDE }),
+    );
 
     return toPacienteResponseDto(paciente);
   }
@@ -117,20 +116,24 @@ export class PacienteService {
 
     await this.ensureCatalogsExist(data);
 
-    const telefonoFinal = data.telefono !== undefined ? data.telefono : existing.telefono;
-    const emailFinal = data.email !== undefined ? data.email : existing.email;
-
-    if (!telefonoFinal && !emailFinal) {
-      throw new BadRequestError('Debe indicar al menos teléfono o correo');
-    }
-
-    const paciente = await this.prisma.paciente.update({
-      where: { id },
-      data,
-      include: PACIENTE_INCLUDE,
-    });
+    const paciente = await this.withUniqueDocumentoCheck(() =>
+      this.prisma.paciente.update({ where: { id }, data, include: PACIENTE_INCLUDE }),
+    );
 
     return toPacienteResponseDto(paciente);
+  }
+
+  // El número de documento es único a nivel de BD; se traduce la violación de esa
+  // constraint (P2002) a un 409 en vez de dejar que se filtre como error 500.
+  private async withUniqueDocumentoCheck<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictError('El número de documento ya está registrado');
+      }
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<void> {
