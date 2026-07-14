@@ -12,7 +12,7 @@ Todas las rutas salvo `POST /auth/login` requieren el header:
 Authorization: Bearer <token>
 ```
 
-El token se obtiene en `POST /auth/login` y expira según `JWT_EXPIRES_IN` (segundos, definido en `.env`).
+El token se obtiene en `POST /auth/login` y expira según `JWT_EXPIRES_IN` (definido en `.env`; acepta segundos puros como `3600` o un formato de duración como `7d`, `1h`).
 
 ### Roles
 
@@ -195,12 +195,12 @@ Lista paginada con búsqueda y filtros.
 | Campo | Tipo | Requerido | Notas |
 |---|---|---|---|
 | `tipoDocumentoId` | uuid | Sí | Debe existir en el catálogo `tipo_documento`. |
-| `numeroDocumento` | string | Sí | |
+| `numeroDocumento` | string | Sí | Único (constraint a nivel de BD). |
 | `nombreCompleto` | string | Sí | |
 | `fechaNacimiento` | date (ISO) | Sí | No puede ser posterior a hoy. |
 | `generoId` | uuid | Sí | Debe existir en el catálogo `genero`. |
-| `telefono` | string | Condicional | Al menos uno de `telefono` / `email` es obligatorio. |
-| `email` | string (email) | Condicional | Al menos uno de `telefono` / `email` es obligatorio. |
+| `telefono` | string | Sí | |
+| `email` | string (email) | No | |
 | `epsId` | uuid | Sí | Debe existir en el catálogo `eps`. |
 | `ciudadId` | uuid | Sí | Debe existir en el catálogo `ciudad`. |
 | `prioridad` | `ALTA` \| `MEDIA` \| `BAJA` | Sí | |
@@ -209,7 +209,8 @@ Lista paginada con búsqueda y filtros.
 **Respuesta 201** — mismo shape que `GET /patients/:id`, con `code: 201`.
 
 **Errores**
-- `400` — validación de Zod (campo faltante/formato inválido, o ni `telefono` ni `email`), o alguna FK (`tipoDocumentoId`, `generoId`, `epsId`, `ciudadId`) no existe en su catálogo.
+- `400` — validación de Zod (campo faltante/formato inválido), o alguna FK (`tipoDocumentoId`, `generoId`, `epsId`, `ciudadId`) no existe en su catálogo.
+- `409` — `numeroDocumento` ya registrado en otro paciente.
 
 ---
 
@@ -219,13 +220,14 @@ Actualización parcial: se puede enviar cualquier subconjunto de los campos de c
 
 **Path params:** `id` (uuid).
 
-**Body** — mismos campos que `POST /patients`, todos opcionales. `telefono` y `email` aceptan `null` explícito para limpiarlos, pero el resultado final (lo enviado + lo que ya existía en el registro) debe conservar al menos uno de los dos.
+**Body** — mismos campos que `POST /patients`, todos opcionales. `telefono` no acepta `null` (es obligatorio, no se puede limpiar); `email` sí acepta `null` explícito para limpiarlo.
 
 **Respuesta 200** — mismo shape que `GET /patients/:id`.
 
 **Errores**
-- `400` — validación de Zod, FK inexistente, o la combinación final de `telefono`/`email` queda vacía.
+- `400` — validación de Zod o FK inexistente.
 - `404` — el paciente no existe o está eliminado.
+- `409` — `numeroDocumento` ya registrado en otro paciente.
 
 ---
 
@@ -253,6 +255,63 @@ Solo `ADMIN`. Soft delete: marca `activo = false`, no borra la fila. El registro
 
 ---
 
-## Pendiente
+## Catálogos
 
-- `GET /api/v1/dashboard` — indicadores para `ADMIN` (volumen total, distribución por estado y prioridad). Aún no implementado.
+Requieren `Authorization: Bearer <token>` (cualquier rol autenticado). Pensadas para poblar selects del frontend (tipo de documento, género, EPS, ciudad) al crear/editar un paciente.
+
+| Ruta | Descripción |
+|---|---|
+| `GET /api/v1/catalogos/tipo-documentos` | Tipos de documento con `estado: ACTIVO`, ordenados por `nombre`. |
+| `GET /api/v1/catalogos/generos` | Géneros con `estado: ACTIVO`, ordenados por `nombre`. |
+| `GET /api/v1/catalogos/eps` | Todas las EPS, ordenadas por `nombre`. |
+| `GET /api/v1/catalogos/ciudades` | Todas las ciudades, ordenadas por `nombre`. |
+
+**Respuesta 200** — `data` es un array recortado a los campos de display (sin `estado`/`createdAt`/`updatedAt`):
+
+| Ruta | Shape de cada item |
+|---|---|
+| `tipo-documentos` | `{ id, nombre }` |
+| `generos` | `{ id, nombre }` |
+| `eps` | `{ id, codigo, nombre }` |
+| `ciudades` | `{ id, nombre, codigoPostal }` |
+
+```json
+{
+  "status": "success",
+  "message": "EPS obtenidas correctamente",
+  "code": 200,
+  "data": [
+    { "id": "uuid", "codigo": "EPS008", "nombre": "Famisanar" }
+  ]
+}
+```
+
+**Errores**
+- `401` — sin token o token inválido.
+
+---
+
+## Dashboard
+
+### `GET /api/v1/dashboard`
+
+Solo `ADMIN`. Indicadores simples sobre los pacientes activos (excluye los eliminados con soft delete).
+
+**Respuesta 200**
+
+```json
+{
+  "status": "success",
+  "message": "Indicadores obtenidos correctamente",
+  "code": 200,
+  "data": {
+    "totalPacientes": 1000,
+    "porEstado": { "PENDIENTE": 320, "EN_ATENCION": 280, "ATENDIDO": 400 },
+    "porPrioridad": { "ALTA": 210, "MEDIA": 540, "BAJA": 250 }
+  }
+}
+```
+
+**Errores**
+- `401` — sin token.
+- `403` — rol `OPERADOR` (dashboard exclusivo de `ADMIN`).
