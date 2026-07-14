@@ -25,7 +25,8 @@ Monorepo
 
 ## Estructura del proyecto 
 `src/`:
-- `modules/` — Cada uno de los modulos de dominio ( route, controller, service, schema (validación con zod), dto (Con inferencia de los esquemas zod) , index (inyeccion de dependencias manual) ) 
+- `modules/` — Cada uno de los modulos de dominio ( route, controller, service, schema (validación con zod), dto (Con inferencia de los esquemas zod) , index -> (inyeccion de dependencias manual) ) 
+- `module/index` - centralizar rutas principales de los recursoo - ej /usuarios, userRouter
 - `infrastructure/` — Configuracion de la base  de datos y prisma ( esquema prisma, migraciones ) 
 - `common/` — Funciones compartidas ( middlewares, errors (manejo de errores), funciones generales, global namespaces )
 -`src/app.ts` - Inicio servidor express

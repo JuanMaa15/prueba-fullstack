@@ -11,3 +11,106 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Estado {
+  ACTIVO
+  INACTIVO
+}
+
+enum Rol {
+  ADMIN
+  OPERADOR
+}
+
+enum Prioridad {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum EstadoCita {
+  PENDIENTE
+  EN_ATENCION
+  ATENDIDO
+}
+
+model Eps {
+  id        String   @id @default(uuid()) @db.Uuid
+  codigo    String   @db.VarChar
+  nombre    String   @db.VarChar
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pacientes Paciente[]
+
+  @@map("eps")
+}
+
+model TipoDocumento {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String   @db.VarChar
+  estado    Estado
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pacientes Paciente[]
+
+  @@map("tipo_documento")
+}
+
+model Ciudad {
+  id           String  @id @default(uuid()) @db.Uuid
+  codigoPostal String? @map("codigo_postal") @db.VarChar
+  nombre       String  @db.VarChar
+
+  pacientes Paciente[]
+
+  @@map("ciudad")
+}
+
+model Genero {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String   @db.VarChar
+  estado    Estado
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pacientes Paciente[]
+
+  @@map("genero")
+}
+
+model Paciente {
+  id                String     @id @default(uuid()) @db.Uuid
+  tipoDocumentoId   String     @map("tipo_documento_id") @db.Uuid
+  numeroDocumento   String     @map("numero_documento") @db.VarChar
+  nombreCompleto    String     @map("nombre_completo") @db.VarChar
+  fechaNacimiento   DateTime   @map("fecha_nacimiento") @db.Date
+  generoId          String     @map("genero_id") @db.Uuid
+  telefono          String?    @db.VarChar
+  email             String?    @db.VarChar
+  epsId             String     @map("eps_id") @db.Uuid
+  ciudadId          String     @map("ciudad_id") @db.Uuid
+  prioridad         Prioridad
+  estadoCita        EstadoCita @default(PENDIENTE) @map("estado_cita")
+
+  tipoDocumento TipoDocumento @relation(fields: [tipoDocumentoId], references: [id])
+  genero        Genero        @relation(fields: [generoId], references: [id])
+  eps           Eps           @relation(fields: [epsId], references: [id])
+  ciudad        Ciudad        @relation(fields: [ciudadId], references: [id])
+
+  @@map("pacientes")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  usuario   String   @db.VarChar
+  nombre    String   @db.VarChar
+  rol       Rol
+  estado    Estado
+  password  String   @db.VarChar
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
