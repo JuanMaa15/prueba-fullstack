@@ -93,6 +93,8 @@ model Paciente {
   ciudadId          String     @map("ciudad_id") @db.Uuid
   prioridad         Prioridad
   estadoCita        EstadoCita @default(PENDIENTE) @map("estado_cita")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   tipoDocumento TipoDocumento @relation(fields: [tipoDocumentoId], references: [id])
   genero        Genero        @relation(fields: [generoId], references: [id])
