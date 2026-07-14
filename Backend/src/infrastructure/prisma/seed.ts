@@ -2,16 +2,15 @@ import path from 'node:path';
 import { readSheet, parseSheetData } from 'read-excel-file/node';
 import type { CellValue } from 'read-excel-file/node';
 import { prisma } from '@/infrastructure/prisma/client.ts';
-import { Estado, EstadoCita, Prioridad } from '@/generated/prisma/enums.ts';
+import { Estado, EstadoCita, Prioridad, Rol } from '@/generated/prisma/enums.ts';
 
 const EXCEL_PATH = path.resolve(
   import.meta.dirname,
   '../../../../Datos_Sinteticos_Prueba_Full_Stack_Junior_2026.xlsx',
 );
 
-// El archivo trae 1.000 pacientes. Se limita a una muestra para verificar el import;
-// subir este valor (o quitar el slice en seedPacientes) para cargar el archivo completo.
-const IMPORT_LIMIT = 10;
+// El archivo trae 1.000 pacientes; se cargan todos.
+const IMPORT_LIMIT = 1000;
 
 // La hoja "Catalogos" del Excel no incluye ciudad; los valores únicos fueron provistos aparte.
 const CIUDADES = ['Buga', 'Tuluá', 'Jamundí', 'Yumbo', 'Cartago', 'Palmira', 'Cali'];
@@ -26,6 +25,11 @@ const ESTADO_CITA_MAP: Record<string, EstadoCita> = {
   Pendiente: EstadoCita.PENDIENTE,
   'En atención': EstadoCita.EN_ATENCION,
   Atendido: EstadoCita.ATENDIDO,
+};
+
+const ROL_MAP: Record<string, Rol> = {
+  ADMIN: Rol.ADMIN,
+  OPERADOR: Rol.OPERADOR,
 };
 
 interface CatalogIds {
@@ -49,6 +53,14 @@ const pacienteSchema = {
   estado: { column: 'estado', type: String, required: true },
   fechaCreacion: { column: 'fecha_creacion', type: Date, required: true },
   fechaActualizacion: { column: 'fecha_actualizacion', type: Date, required: true },
+};
+
+const usuarioSchema = {
+  usuario: { column: 'usuario', type: String, required: true },
+  nombre: { column: 'nombre', type: String, required: true },
+  rol: { column: 'rol', type: String, required: true },
+  activo: { column: 'activo', type: Boolean, required: true },
+  password: { column: 'password_demo', type: String, required: true },
 };
 
 function cellToString(value: CellValue | null): string | undefined {
@@ -150,9 +162,38 @@ async function seedPacientes(catalogos: CatalogIds): Promise<void> {
   console.log(`Se importaron ${filas.length} de ${result.objects.length} pacientes disponibles en el archivo.`);
 }
 
+// Usuarios de prueba (hoja "Usuarios_Login"). Se usa upsert por `usuario` en vez de
+// borrar-y-recrear, para no perder usuarios creados manualmente fuera del seed.
+async function seedUsuarios(): Promise<void> {
+  const rawUsuarios = await readSheet(EXCEL_PATH, 'Usuarios_Login');
+  const result = parseSheetData(rawUsuarios, usuarioSchema);
+
+  if (result.errors) {
+    throw new Error(`Errores al leer la hoja "Usuarios_Login": ${JSON.stringify(result.errors)}`);
+  }
+
+  for (const fila of result.objects) {
+    const data = {
+      nombre: fila.nombre,
+      rol: requireEnum(ROL_MAP, fila.rol, 'rol'),
+      estado: fila.activo ? Estado.ACTIVO : Estado.INACTIVO,
+      password: fila.password,
+    };
+
+    await prisma.user.upsert({
+      where: { usuario: fila.usuario },
+      update: data,
+      create: { usuario: fila.usuario, ...data },
+    });
+  }
+
+  console.log(`Se importaron/actualizaron ${result.objects.length} usuarios.`);
+}
+
 async function main(): Promise<void> {
   const catalogos = await seedCatalogos();
   await seedPacientes(catalogos);
+  await seedUsuarios();
 }
 
 main()
