@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# Valida la convención de commits: type(category): mensaje < 100 caracteres
+
+first_line=$(head -n 1 "$1")
+
+# Los commits generados por git (merge/revert) no se validan
+case "$first_line" in
+  Merge*|Revert*) exit 0 ;;
+esac
+
+pattern="^(chore|feat|refactor|fix)\([a-zA-Z0-9_-]+\): .+"
+
+if ! echo "$first_line" | grep -qE "$pattern"; then
+  echo ""
+  echo "  ❌ Formato de commit inválido."
+  echo ""
+  echo "  Debe ser: type(category): mensaje"
+  echo ""
+  echo "  Types permitidos: chore, feat, refactor, fix"
+  echo ""
+  echo "  Ejemplos:"
+  echo "    feat(core): agregar middleware de rate limiting"
+  echo "    fix(database): corregir migración de verifications"
+  echo "    chore(deps): actualizar dependencias"
+  echo "    refactor(api): simplificar ruta de verifications"
+  echo ""
+  exit 1
+fi
+
+if [ ${#first_line} -gt 100 ]; then
+  echo ""
+  echo "  ❌ El mensaje supera los 100 caracteres (tiene ${#first_line})."
+  echo ""
+  exit 1
+fi
